@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Step 3: Pack .uasset files into a game mod (.pak/.ucas/.utoc).
+Step 3: Pack .uasset files into a game mod (.utoc/.ucas).
 
-1. repak pack  -> legacy .pak from the uasset folder
-2. retoc to-zen -> convert to IoStore container (.utoc/.ucas/.pak)
+retoc to-zen -> IoStore container (.utoc/.ucas) straight from the uasset folder.
 
 The uasset folder must contain the game-relative structure under <content_prefix>
-(e.g. Impact/Content/Assets/...). The pak mounts at <mount_point> (default ../../../).
+(e.g. Impact/Content/Assets/...). retoc reads the folder directly, so no legacy
+.pak step is needed (UE5 games load IoStore .utoc/.ucas; a legacy .pak would
+just be redundant).
 
 Usage:
     python 3_pack.py [config.json]
@@ -19,7 +20,6 @@ import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-REPAK = HERE / "tools" / "repak.exe"
 RETOC = HERE / "tools" / "retoc.exe"
 
 
@@ -45,17 +45,11 @@ def main():
     pak_dir = HERE / cfg['pak_output']
     pak_name = cfg['pak_name']
     engine = cfg['engine_version']
-    mount_point = cfg.get('mount_point', '../../../')
     content_prefix = cfg.get('content_prefix', '')
 
     if not uasset_root.exists():
         print(f"ERROR: uasset folder not found: {uasset_root}")
         print("  Run step 2 first: python 2_json_to_uasset.py")
-        sys.exit(1)
-    if not REPAK.exists():
-        print(f"ERROR: repak.exe not found: {REPAK}")
-        print("  Download it: https://github.com/trumank/repak/releases")
-        print("  Place repak.exe in the tools/ folder.")
         sys.exit(1)
     if not RETOC.exists():
         print(f"ERROR: retoc.exe not found: {RETOC}")
@@ -64,7 +58,6 @@ def main():
         sys.exit(1)
 
     pak_dir.mkdir(parents=True, exist_ok=True)
-    pak_path = pak_dir / f"{pak_name}.pak"
     utoc_path = pak_dir / f"{pak_name}.utoc"
 
     # Step 0: merge the language fallback (e.g. English subtitles in the L10N/fr
@@ -75,22 +68,24 @@ def main():
         shutil.copytree(l10n, dest, dirs_exist_ok=True)
         print(f"Copied language fallback -> {dest}")
 
-    # Step 1: legacy .pak
-    print(f"Step 1: repak pack -> {pak_path}")
-    if not run([str(REPAK), "pack", "--mount-point", mount_point, str(uasset_root), str(pak_path)]):
+    # Step 1: IoStore container straight from the uasset folder (no repak needed)
+    print(f"Step 1: retoc to-zen -> {utoc_path}")
+    if not run([str(RETOC), "to-zen", "--version", engine, str(uasset_root), str(utoc_path)]):
         sys.exit(1)
 
-    # Step 2: IoStore container
-    print(f"Step 2: retoc to-zen -> {utoc_path}")
-    if not run([str(RETOC), "to-zen", "--version", engine, str(pak_path), str(utoc_path)]):
-        sys.exit(1)
-
-    # Step 3: verify
-    print(f"Step 3: retoc verify")
+    # Step 2: verify
+    print(f"Step 2: retoc verify")
     run([str(RETOC), "verify", str(utoc_path)])
 
+    # retoc writes an empty legacy .pak stub alongside the container — it has
+    # no data (just a header), the game doesn't need it, drop it
+    for stub in pak_dir.glob(f"{pak_name}.pak"):
+        if stub.stat().st_size < 1024:
+            stub.unlink()
+            print(f"Removed empty .pak stub: {stub.name}")
+
     print("\nDone. Mod files:")
-    for f in sorted(pak_dir.glob(f"{pak_name}.*")):
+    for f in sorted(pak_dir.glob(f"{pak_name}.utoc")) + sorted(pak_dir.glob(f"{pak_name}.ucas")):
         print(f"  {f} ({f.stat().st_size / 1024:.0f} KB)")
 
 

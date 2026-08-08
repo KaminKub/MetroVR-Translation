@@ -1,6 +1,6 @@
 # UAsset Translation Toolkit
 
-A toolkit for translating Unreal Engine 5 (UE5) games — inject translations from a CSV into subtitle assets, then pack them into a game-loadable mod (.pak/.ucas/.utoc).
+A toolkit for translating Unreal Engine 5 (UE5) games — inject translations from a CSV into subtitle assets, then pack them into a game-loadable mod (.utoc/.ucas).
 
 > Built from the Metro Awakening (UE5.2) translation project — made generic so it works with any UE5 game.
 > Core idea: edit `CultureInvariantString` in subtitle assets (same as UAssetGUI).
@@ -18,14 +18,14 @@ source JSON ──────────────────────�
                                           2_json_to_uasset.py ──► .uasset/.uexp
                                                         │
                                                         ▼
-                                          3_pack.py ──► .pak/.ucas/.utoc (mod)
+                                          3_pack.py ──► .utoc/.ucas (mod)
 ```
 
 | Step | Script | Input | Output |
 |------|--------|-------|--------|
 | 1 | `1_inject_translations.py` | CSV + source JSON | `output/translated_json/` |
 | 2 | `2_json_to_uasset.py` | `output/translated_json/` | `output/uasset/` |
-| 3 | `3_pack.py` | `output/uasset/` | `output/pak/` |
+| 3 | `3_pack.py` | `output/uasset/` | `output/pak/` (.utoc/.ucas) |
 
 Run everything at once: `python run_all.py`
 
@@ -40,7 +40,7 @@ Metro_translation/
 ├── run_all.py                   # run all 3 steps
 ├── 1_inject_translations.py     # step 1: CSV → JSON
 ├── 2_json_to_uasset.py          # step 2: JSON → uasset
-├── 3_pack.py                    # step 3: uasset → pak
+├── 3_pack.py                    # step 3: uasset → mod (.utoc/.ucas)
 ├── translations_TEMPLATE.csv    # ⬅️ translation template (fill Target_Translation)
 ├── input/
 │   ├── source_json/             # ⬅️ source JSON (extracted from game)
@@ -48,12 +48,11 @@ Metro_translation/
 ├── output/                      # results (auto-created)
 │   ├── translated_json/         #   JSON with translations injected
 │   ├── uasset/                  #   .uasset/.uexp
-│   └── pak/                     #   mod .pak/.ucas/.utoc
+│   └── pak/                     #   mod .utoc/.ucas
 ├── json_to_uasset/              # C# converter (UAssetAPI)
 ├── lib/UAssetAPI.dll            # UAssetAPI v1.1.0
-└── tools/                       # ⬅️ download repak.exe + retoc.exe here (see Requirements)
-    ├── repak.exe                # create legacy .pak (download)
-    └── retoc.exe                # convert to IoStore (.utoc/.ucas) (download)
+└── tools/                       # ⬅️ download retoc.exe here (see Requirements)
+    └── retoc.exe                # create IoStore (.utoc/.ucas) (download)
 ```
 
 ---
@@ -62,9 +61,8 @@ Metro_translation/
 
 - **Python 3.10+** (tested with 3.14)
 - **.NET 8 runtime** — to run the prebuilt converter (`json_to_uasset/bin/` is included). To rebuild from source: `cd json_to_uasset && dotnet build -c Release` (requires the SDK)
-- **repak + retoc** — download and place in `tools/`:
-  - **repak** (create legacy .pak): <https://github.com/trumank/repak/releases> — Windows zip → `repak.exe`
-  - **retoc** (convert to IoStore .utoc/.ucas): <https://github.com/trumank/retoc/releases> — Windows zip → `retoc.exe`
+- **retoc** — download and place in `tools/`:
+  - **retoc** (create IoStore .utoc/.ucas): <https://github.com/trumank/retoc/releases> — Windows zip → `retoc.exe`
 - Source JSON must be in **UAssetAPI format** (export with UAssetGUI or the `UAssetJsonExporter` project)
 
 ---
@@ -100,11 +98,10 @@ python run_all.py
 ### 3. Get the mod
 
 Mod files are in `output/pak/`:
-- `TranslationMod_P.pak`
-- `TranslationMod_P.ucas`
 - `TranslationMod_P.utoc`
+- `TranslationMod_P.ucas`
 
-Copy all 3 files to `<GameDir>/<Content>/Paks/` and launch the game.
+Copy both files to `<GameDir>/<Content>/Paks/` and launch the game.
 
 ---
 
@@ -119,7 +116,6 @@ Copy all 3 files to `<GameDir>/<Content>/Paks/` and launch the game.
 | `uasset_output` | `output/uasset` | uasset folder |
 | `pak_output` | `output/pak` | mod folder |
 | `pak_name` | `TranslationMod_P` | mod name (change to avoid conflicts) |
-| `mount_point` | `../../../` | pak mount point (default works for most games) |
 | `csv_path_prefix_to_strip` | `Impact/Content/` | prefix stripped from CSV paths when mapping to source_json |
 | `content_prefix` | `Impact/Content` | in-game path structure (used to place uassets at the correct pak path) |
 | `l10n_fallback` | `input/L10N/fr` | folder merged into the pak as `L10N/fr` — original-language subtitles so players can switch back in-game |
@@ -141,7 +137,7 @@ Copy all 3 files to `<GameDir>/<Content>/Paks/` and launch the game.
 
 - This toolkit (scripts, C# source, docs) is released under the **MIT License** — see `LICENSE`.
 - Third-party components retain their own licenses:
-  - **repak** / **retoc** — [repak](https://github.com/trumank/repak) / [retoc](https://github.com/trumank/retoc) (MIT) — downloaded separately, see Requirements
+  - **retoc** — [retoc](https://github.com/trumank/retoc) (MIT) — downloaded separately, see Requirements
   - `lib/UAssetAPI.dll` — [UAssetAPI](https://github.com/atenfyr/UAssetAPI) (MIT)
 - **Game assets are NOT covered by this license.** `input/source_json/` and `input/L10N/fr/` are extracted from the game and remain the game's copyrighted content — do not redistribute them. Extract your own from a game you own (see below).
 
@@ -153,11 +149,11 @@ Copy all 3 files to `<GameDir>/<Content>/Paks/` and launch the game.
 |---------|-----|
 | `ERROR: CSV not found` | check that `translations_TEMPLATE.csv` exists |
 | `ERROR: converter not found` | rebuild: `cd json_to_uasset && dotnet build -c Release` |
-| `ERROR: repak.exe / retoc.exe not found` | download from the links in Requirements, place in `tools/` |
+| `ERROR: retoc.exe not found` | download from the links in Requirements, place in `tools/` |
 | `[MISS]` in step 1 | CSV path doesn't match a file in `source_json/` — check the prefix |
 | `[MISMATCH]` in step 1 | cue count in JSON doesn't match row count in CSV |
 | `retoc verify` fails | check `engine_version` in config matches the game |
-| game doesn't load the mod | check mount point + `content_prefix` structure matches the game |
+| game doesn't load the mod | check `content_prefix` structure matches the game |
 
 ---
 
