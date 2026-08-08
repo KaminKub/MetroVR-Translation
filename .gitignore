@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.pyc
+
+# .NET build output (obj regenerates; bin/ is committed so the converter runs out of the box)
+json_to_uasset/obj/
+
+# Pipeline output (auto-created)
+output/
+
+# Game data — extracted from the game, not part of the toolkit
+input/source_json/*
+!input/source_json/.gitkeep
+input/L10N/*
+!input/L10N/.gitkeep
+
+# Third-party tools — keep locally, download separately (see README)
+tools/repak.exe
+tools/retoc.exe
+tools/oo2core_9_win64.dll

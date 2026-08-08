@@ -1,0 +1,13 @@
+{
+  "engine_version": "UE5_2",
+  "csv_file": "translations_TEMPLATE.csv",
+  "source_json": "input/source_json",
+  "translated_json": "output/translated_json",
+  "uasset_output": "output/uasset",
+  "pak_output": "output/pak",
+  "pak_name": "TranslationMod_P",
+  "mount_point": "../../../",
+  "csv_path_prefix_to_strip": "Impact/Content/",
+  "content_prefix": "Impact/Content",
+  "l10n_fallback": "input/L10N/fr"
+}
